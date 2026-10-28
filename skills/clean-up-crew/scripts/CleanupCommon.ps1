@@ -1,4 +1,4 @@
-# Shared helpers for the clean-up skill. Dot-source this file from the scripts.
+# Shared helpers for the clean-up-crew skill. Dot-source this file from the scripts.
 
 $script:SkillRoot = Split-Path -Parent $PSScriptRoot
 $script:TargetsFile = Join-Path $script:SkillRoot 'references\targets.json'

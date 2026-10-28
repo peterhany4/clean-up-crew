@@ -1,4 +1,4 @@
-# Guardrail tests for the clean-up skill. Run with:
+# Guardrail tests for the clean-up-crew skill. Run with:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Guardrails.ps1
 
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'scripts\CleanupCommon.ps1')

@@ -159,7 +159,7 @@ foreach ($row in $targetRows) {
     if ($row.tier -eq 1 -and -not $row.blocked) { $tier1Bytes += $row.bytes }
 }
 if ($tier1Bytes -gt 0) {
-    [void]$recommendations.Add("Tier 1 caches hold $(Format-Bytes $tier1Bytes). Review them with /clean-up.")
+    [void]$recommendations.Add("Tier 1 caches hold $(Format-Bytes $tier1Bytes). Review them with /clean-up-crew.")
 }
 $hiber = $systemFiles | Where-Object { $_.Name -eq 'hiberfil.sys' } | Select-Object -First 1
 if ($hiber -and $null -ne $hiber.Bytes -and $hiber.Bytes -gt 4GB) {

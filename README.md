@@ -4,7 +4,7 @@
 
 A crew of OpenCode skills for Windows disk cleanup and safe maintenance.
 
-The first skill, **`clean-up`**, audits disk usage, builds a cleanup plan, and deletes only after you approve that exact plan. It never force-kills processes and never works around administrator requirements.
+The first skill, **`clean-up-crew`**, audits disk usage, builds a cleanup plan, and deletes only after you approve that exact plan. It never force-kills processes and never works around administrator requirements.
 
 ## Requirements
 
@@ -18,31 +18,31 @@ The first skill, **`clean-up`**, audits disk usage, builds a cleanup plan, and d
 ### 1. Install the skill
 
 ```powershell
-npx skills add peterhany4/clean-up-crew --skill clean-up -g -a opencode -y --copy
+npx skills add peterhany4/clean-up-crew --skill clean-up-crew -g -a opencode -y --copy
 ```
 
-### 2. Install the `/clean-up` command
+### 2. Install the `/clean-up-crew` command
 
 The skills CLI installs skills, not slash commands. The command template ships inside the installed skill. This finds it whether the skill was installed globally by the CLI or copied manually:
 
 ```powershell
 $skillDir = @(
-    "$env:USERPROFILE\.agents\skills\clean-up",
-    "$env:USERPROFILE\.config\opencode\skills\clean-up"
+    "$env:USERPROFILE\.agents\skills\clean-up-crew",
+    "$env:USERPROFILE\.config\opencode\skills\clean-up-crew"
 ) | Where-Object { Test-Path -LiteralPath (Join-Path $_ 'command.md') } | Select-Object -First 1
-if (-not $skillDir) { throw 'clean-up skill not found. Run the install step first.' }
+if (-not $skillDir) { throw 'clean-up-crew skill not found. Run the install step first.' }
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\commands" | Out-Null
-Copy-Item -LiteralPath (Join-Path $skillDir 'command.md') "$env:USERPROFILE\.config\opencode\commands\clean-up.md" -Force
+Copy-Item -LiteralPath (Join-Path $skillDir 'command.md') "$env:USERPROFILE\.config\opencode\commands\clean-up-crew.md" -Force
 ```
 
 ### 3. Restart OpenCode if needed
 
-Then run `/clean-up` or ask OpenCode to "check C drive".
+Then run `/clean-up-crew` or ask OpenCode to "check C drive".
 
 ### Update later
 
 ```powershell
-npx skills update clean-up -g
+npx skills update clean-up-crew -g
 ```
 
 ## What it does
@@ -68,8 +68,8 @@ If you do not want to use the skills CLI, download or clone this repository and 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\skills" | Out-Null
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\commands" | Out-Null
-Copy-Item -LiteralPath .\skills\clean-up -Destination "$env:USERPROFILE\.config\opencode\skills\clean-up" -Recurse -Force
-Copy-Item -LiteralPath .\skills\clean-up\command.md -Destination "$env:USERPROFILE\.config\opencode\commands\clean-up.md" -Force
+Copy-Item -LiteralPath .\skills\clean-up-crew -Destination "$env:USERPROFILE\.config\opencode\skills\clean-up-crew" -Recurse -Force
+Copy-Item -LiteralPath .\skills\clean-up-crew\command.md -Destination "$env:USERPROFILE\.config\opencode\commands\clean-up-crew.md" -Force
 ```
 
 If the repository was downloaded as a zip, unblock it first:
@@ -83,29 +83,29 @@ Or right-click the zip, open Properties, select **Unblock**, then extract it.
 ## Verify
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up\tests\Test-Guardrails.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up\tests\Test-Apply.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up-crew\tests\Test-Guardrails.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up-crew\tests\Test-Apply.ps1
 ```
 
 Expected: 13 guardrail passes and 14 apply passes. The apply test uses a temporary fixture and restores `targets.json` and the local history file.
 
 ## Repository layout
 
-- `skills/clean-up/SKILL.md` - workflow and safety rules.
-- `skills/clean-up/command.md` - `/clean-up` slash command template.
-- `skills/clean-up/references/targets.json` - allowlisted cleanup targets.
-- `skills/clean-up/scripts/` - report, plan, apply, and trend scripts.
-- `skills/clean-up/tests/` - guardrail and end-to-end tests.
+- `skills/clean-up-crew/SKILL.md` - workflow and safety rules.
+- `skills/clean-up-crew/command.md` - `/clean-up-crew` slash command template.
+- `skills/clean-up-crew/references/targets.json` - allowlisted cleanup targets.
+- `skills/clean-up-crew/scripts/` - report, plan, apply, and trend scripts.
+- `skills/clean-up-crew/tests/` - guardrail and end-to-end tests.
 
 ## Customizing
 
-Add or remove targets in `skills/clean-up/references/targets.json`. Keep the required fields and run both tests after edits.
+Add or remove targets in `skills/clean-up-crew/references/targets.json`. Keep the required fields and run both tests after edits.
 
 The skill targets the Windows system drive and uses `%SystemRoot%`, `%LOCALAPPDATA%`, and `%SystemDrive%`, so it adapts to the system drive letter.
 
 ## More skills
 
-The `clean-up` skill is the first member of the crew. New Windows maintenance skills can live under `skills/` without changing the install command for existing skills.
+The `clean-up-crew` skill is the first member of the crew. New Windows maintenance skills can live under `skills/` without changing the install command for existing skills.
 
 ## License
 

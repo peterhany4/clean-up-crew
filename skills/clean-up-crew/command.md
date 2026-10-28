@@ -2,7 +2,7 @@
 description: Check Windows disk usage and clean approved caches safely
 ---
 
-Load the `clean-up` skill with the `skill` tool. The skill is authoritative for safety, targets, and script behavior. This command maps the user's arguments to one step of that workflow.
+Load the `clean-up-crew` skill with the `skill` tool. The skill is authoritative for safety, targets, and script behavior. This command maps the user's arguments to one step of that workflow.
 
 User arguments: `$ARGUMENTS`
 
@@ -13,13 +13,13 @@ User arguments: `$ARGUMENTS`
 | empty, `report`, `status` | Run `Get-DiskReport.ps1 -SaveHistory`; present the report. Do not create a plan. |
 | `trend` | Run `Get-Trend.ps1 -Last 8`; summarize growth and runway. |
 | `targets`, `list` | List target IDs from the skill's `references/targets.json` with tier, name, and risk. Read-only. |
-| `plan <id> [<id> ...]` | Run `New-CleanupPlan.ps1 -Items <ids> -OutFile "$env:TEMP\clean-up-plan.json"`; show the plan. Stop. |
-| `plan tier1` | Run `New-CleanupPlan.ps1 -AllTier1 -OutFile "$env:TEMP\clean-up-plan.json"`; show the plan. Stop. |
-| `dry-run [plan-path]` | Run `Invoke-Cleanup.ps1 -PlanFile <path>` without `-Apply`. Default path: `$env:TEMP\clean-up-plan.json`. |
-| `apply [plan-path]` | Only with explicit approval of that exact plan; run `Invoke-Cleanup.ps1 -PlanFile <path> -Apply`. Default path: `$env:TEMP\clean-up-plan.json`. |
+| `plan <id> [<id> ...]` | Run `New-CleanupPlan.ps1 -Items <ids> -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan. Stop. |
+| `plan tier1` | Run `New-CleanupPlan.ps1 -AllTier1 -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan. Stop. |
+| `dry-run [plan-path]` | Run `Invoke-Cleanup.ps1 -PlanFile <path>` without `-Apply`. Default path: `$env:TEMP\clean-up-crew-plan.json`. |
+| `apply [plan-path]` | Only with explicit approval of that exact plan; run `Invoke-Cleanup.ps1 -PlanFile <path> -Apply`. Default path: `$env:TEMP\clean-up-crew-plan.json`. |
 | bare target IDs | Treat as `plan <ids>`. |
 
-If `<plan-path>` is omitted for `dry-run` or `apply`, use `$env:TEMP\clean-up-plan.json`. If that file does not exist, run `plan` first; do not guess target IDs. If the request is ambiguous, ask one question. Do not infer approval from a prior "ok", "go ahead", or "clean it" that was not tied to a shown plan.
+If `<plan-path>` is omitted for `dry-run` or `apply`, use `$env:TEMP\clean-up-crew-plan.json`. If that file does not exist, run `plan` first; do not guess target IDs. If the request is ambiguous, ask one question. Do not infer approval from a prior "ok", "go ahead", or "clean it" that was not tied to a shown plan.
 
 ## Non-negotiable rules
 
