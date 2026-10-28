@@ -8,9 +8,11 @@ on:
 jobs:
   test:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run guardrail tests
         shell: powershell
