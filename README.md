@@ -4,7 +4,7 @@
 
 A crew of OpenCode skills for Windows disk cleanup and safe maintenance.
 
-The first skill, **`clean-up-crew`**, audits disk usage across the Windows system drive, builds a cleanup plan, and deletes only after you approve that exact plan. It covers developer and browser caches, temp files, crash dumps, Windows Update caches, and the Recycle Bin. An optional deep scan shows the largest files and old installers anywhere on the drive, but never deletes them. It never force-kills processes and never works around administrator requirements.
+The first skill, **`clean-up-crew`**, audits disk usage across the Windows system drive, builds a cleanup plan, and deletes only after you approve that exact plan. It covers developer and browser caches, temp files, crash dumps, Windows Update caches, and the Recycle Bin. An optional deep scan shows the largest files and old installers outside Windows and Program Files, but never deletes them. It never force-kills processes and never works around administrator requirements.
 
 ## Requirements
 
@@ -69,9 +69,11 @@ npx skills update clean-up-crew -g
 If you do not want to use the skills CLI, download or clone this repository and run the following from the repository root:
 
 ```powershell
+$dest = "$env:USERPROFILE\.config\opencode\skills\clean-up-crew"
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\skills" | Out-Null
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\commands" | Out-Null
-Copy-Item -LiteralPath .\skills\clean-up-crew -Destination "$env:USERPROFILE\.config\opencode\skills\clean-up-crew" -Recurse -Force
+if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
+Copy-Item -LiteralPath .\skills\clean-up-crew -Destination $dest -Recurse -Force
 Copy-Item -LiteralPath .\skills\clean-up-crew\command.md -Destination "$env:USERPROFILE\.config\opencode\commands\clean-up-crew.md" -Force
 ```
 
