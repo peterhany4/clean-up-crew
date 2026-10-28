@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Clean Up Crew">
+  <rect x="6" y="16" width="52" height="28" rx="6" fill="none" stroke="#1f6feb" stroke-width="4"/>
+  <circle cx="45" cy="30" r="4" fill="#1f6feb"/>
+  <path d="M14 52l7-7M14 59l11-11M23 60l11-11" stroke="#3fb950" stroke-width="4" stroke-linecap="round"/>
+</svg>
