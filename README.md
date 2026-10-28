@@ -23,11 +23,16 @@ npx skills add peterhany4/clean-up-crew --skill clean-up -g -a opencode -y --cop
 
 ### 2. Install the `/clean-up` command
 
-The skills CLI installs skills, not slash commands. The command template ships inside the installed skill:
+The skills CLI installs skills, not slash commands. The command template ships inside the installed skill. This finds it whether the skill was installed globally by the CLI or copied manually:
 
 ```powershell
+$skillDir = @(
+    "$env:USERPROFILE\.agents\skills\clean-up",
+    "$env:USERPROFILE\.config\opencode\skills\clean-up"
+) | Where-Object { Test-Path -LiteralPath (Join-Path $_ 'command.md') } | Select-Object -First 1
+if (-not $skillDir) { throw 'clean-up skill not found. Run the install step first.' }
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.config\opencode\commands" | Out-Null
-Copy-Item "$env:USERPROFILE\.config\opencode\skills\clean-up\command.md" "$env:USERPROFILE\.config\opencode\commands\clean-up.md" -Force
+Copy-Item -LiteralPath (Join-Path $skillDir 'command.md') "$env:USERPROFILE\.config\opencode\commands\clean-up.md" -Force
 ```
 
 ### 3. Restart OpenCode if needed
