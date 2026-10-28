@@ -51,6 +51,21 @@ try {
     $json.targets = @($json.targets) + $testTarget
     $json | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $targetsPath -Encoding UTF8
 
+    # Seed a report entry so the trend has both report and apply data to compare.
+    $historyDir = Split-Path -Parent $historyPath
+    if (-not (Test-Path -LiteralPath $historyDir)) {
+        New-Item -ItemType Directory -Path $historyDir -Force | Out-Null
+    }
+    $seedEntry = @{
+        timestamp = (Get-Date).AddMinutes(-1).ToString('o')
+        kind      = 'report'
+        drive     = 'C:'
+        freeGB    = 5.0
+        totalGB   = 100.0
+        targets   = @{}
+    } | ConvertTo-Json -Compress -Depth 6
+    Add-Content -LiteralPath $historyPath -Value $seedEntry -Encoding UTF8
+
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptsDir 'New-CleanupPlan.ps1') `
         -Items test-fixture -OutFile $planPath -Json | Out-Null
     Assert-True ($LASTEXITCODE -eq 0) 'Plan generation succeeds'
