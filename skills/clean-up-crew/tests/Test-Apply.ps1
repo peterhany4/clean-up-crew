@@ -9,6 +9,7 @@ $targetsPath = Join-Path $skillRoot 'references\targets.json'
 $backupPath = Join-Path $env:TEMP 'clean-up-targets-backup.json'
 $planPath = Join-Path $env:TEMP 'clean-up-test-plan.json'
 $fixture = Join-Path $env:TEMP 'opencode-cleanup-apply-test'
+$filesFixture = Join-Path $env:TEMP 'opencode-cleanup-files-test'
 $historyPath = Join-Path $env:LOCALAPPDATA 'opencode-disk-cleanup\history.jsonl'
 $historyBackup = Join-Path $env:TEMP 'clean-up-history-backup.jsonl'
 $historyExisted = Test-Path -LiteralPath $historyPath
@@ -35,6 +36,12 @@ try {
     Set-Content -LiteralPath (Join-Path $fixture 'a.txt') -Value ('x' * 4096)
     Set-Content -LiteralPath (Join-Path $fixture 'sub\b.txt') -Value ('y' * 4096)
 
+    if (Test-Path -LiteralPath $filesFixture) { Remove-Item -LiteralPath $filesFixture -Recurse -Force }
+    New-Item -ItemType Directory -Path $filesFixture -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $filesFixture 'one.dmp') -Value ('z' * 4096)
+    Set-Content -LiteralPath (Join-Path $filesFixture 'two.dmp') -Value ('z' * 4096)
+    Set-Content -LiteralPath (Join-Path $filesFixture 'keep.txt') -Value 'keep'
+
     $json = Get-Content -LiteralPath $targetsPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $testTarget = [pscustomobject]@{
         id = 'test-fixture'
@@ -48,7 +55,19 @@ try {
         regenerates = 'not applicable'
         risk = 'none'
     }
-    $json.targets = @($json.targets) + $testTarget
+    $testFilesTarget = [pscustomobject]@{
+        id = 'test-files'
+        name = 'Test files'
+        tier = 1
+        type = 'files'
+        paths = @((Join-Path $filesFixture '*.dmp'))
+        exclude = @()
+        processes = @()
+        requiresAdmin = $false
+        regenerates = 'not applicable'
+        risk = 'none'
+    }
+    $json.targets = @($json.targets) + $testTarget + $testFilesTarget
     $json | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $targetsPath -Encoding UTF8
 
     # Seed a report entry so the trend has both report and apply data to compare.
@@ -66,12 +85,14 @@ try {
     } | ConvertTo-Json -Compress -Depth 6
     Add-Content -LiteralPath $historyPath -Value $seedEntry -Encoding UTF8
 
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptsDir 'New-CleanupPlan.ps1') `
-        -Items test-fixture -OutFile $planPath -Json | Out-Null
+    $planScript = Join-Path $scriptsDir 'New-CleanupPlan.ps1'
+    & powershell -NoProfile -ExecutionPolicy Bypass -Command "& '$($planScript.Replace("'", "''"))' -Items @('test-fixture','test-files') -OutFile '$($planPath.Replace("'", "''"))' -Json" | Out-Null
     Assert-True ($LASTEXITCODE -eq 0) 'Plan generation succeeds'
 
     $plan = Get-Content -LiteralPath $planPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    Assert-True ($plan.items[0].bytes -gt 0) 'Plan sees fixture bytes'
+    Assert-True (@($plan.items).Count -eq 2) 'Plan includes both fixture targets'
+    Assert-True (($plan.items | Where-Object id -eq 'test-fixture').bytes -gt 0) 'Plan sees fixture bytes'
+    Assert-True (($plan.items | Where-Object id -eq 'test-files').bytes -gt 0) 'Plan sees file target bytes'
 
     $resultJson = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptsDir 'Invoke-Cleanup.ps1') `
         -PlanFile $planPath -Apply -Json
@@ -82,6 +103,8 @@ try {
     Assert-True (Test-Path -LiteralPath $fixture) 'Keeps the target directory itself'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $fixture 'a.txt'))) 'Deletes file child'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $fixture 'sub'))) 'Deletes directory child'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $filesFixture 'one.dmp'))) 'Deletes wildcard-matched files'
+    Assert-True (Test-Path -LiteralPath (Join-Path $filesFixture 'keep.txt')) 'Keeps files outside the wildcard'
     Assert-True ([int64]$result.freedBytes -gt 0) 'Reports freed bytes'
 
     $historyEntries = @(Get-Content -LiteralPath $historyPath -Encoding UTF8 | ForEach-Object { $_ | ConvertFrom-Json })
@@ -106,6 +129,7 @@ try {
         Remove-Item -LiteralPath $historyPath -Force -ErrorAction SilentlyContinue
     }
     if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue }
+    if (Test-Path -LiteralPath $filesFixture) { Remove-Item -LiteralPath $filesFixture -Recurse -Force -ErrorAction SilentlyContinue }
     if (Test-Path -LiteralPath $planPath) { Remove-Item -LiteralPath $planPath -Force -ErrorAction SilentlyContinue }
 }
 

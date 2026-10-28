@@ -19,6 +19,17 @@ function Expand-TargetPath {
     return [IO.Path]::GetFullPath($expanded)
 }
 
+function Resolve-CleanupPath {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $expanded = [Environment]::ExpandEnvironmentVariables($Path)
+    if ($expanded -match '[*?]') {
+        $items = @(Get-Item -Path $expanded -Force -ErrorAction SilentlyContinue)
+        return @($items | ForEach-Object { $_.FullName })
+    }
+    return @([IO.Path]::GetFullPath($expanded))
+}
+
 function Test-SafePath {
     param([string]$Path)
 
@@ -87,7 +98,18 @@ function Expand-CleanupTarget {
         'contents' {
             foreach ($p in @($Target.paths)) {
                 if (-not $p) { continue }
-                [void]$result.Add([pscustomobject]@{ Path = (Expand-TargetPath $p); Kind = 'contents' })
+                foreach ($resolved in (Resolve-CleanupPath $p)) {
+                    [void]$result.Add([pscustomobject]@{ Path = $resolved; Kind = 'contents' })
+                }
+            }
+        }
+        'files' {
+            foreach ($p in @($Target.paths)) {
+                if (-not $p) { continue }
+                foreach ($resolved in (Resolve-CleanupPath $p)) {
+                    if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) { continue }
+                    [void]$result.Add([pscustomobject]@{ Path = $resolved; Kind = 'files' })
+                }
             }
         }
         'profile-caches' {
@@ -239,4 +261,115 @@ function Remove-CleanupContents {
     }
 
     return [pscustomobject]@{ Removed = $removed; Failed = $failed; Errors = @($errors) }
+}
+
+function Remove-CleanupFile {
+    param([Parameter(Mandatory)][string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return [pscustomobject]@{ Removed = 0; Failed = 0; Errors = @() }
+    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return [pscustomobject]@{ Removed = 0; Failed = 0; Errors = @() }
+    }
+
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+        return [pscustomobject]@{ Removed = 1; Failed = 0; Errors = @() }
+    } catch {
+        return [pscustomobject]@{ Removed = 0; Failed = 1; Errors = @($_.Exception.Message) }
+    }
+}
+
+function Get-DeepScan {
+    param(
+        [string]$Root = ($env:SystemDrive + '\'),
+        [int]$LargeFileMB = 250,
+        [int]$OldInstallerDays = 90,
+        [int]$TopFiles = 20,
+        [int]$TopFolders = 10
+    )
+
+    $started = Get-Date
+    $minBytes = [int64]$LargeFileMB * 1MB
+
+    $topDirs = @(Get-ChildItem -LiteralPath $Root -Directory -Force -ErrorAction SilentlyContinue |
+        Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) })
+
+    $topFolderRows = New-Object System.Collections.ArrayList
+    foreach ($d in $topDirs) {
+        [void]$topFolderRows.Add([pscustomobject]@{
+            Name  = $d.Name
+            Bytes = Get-PathSize $d.FullName
+        })
+    }
+    $topFolderRows = @($topFolderRows | Sort-Object Bytes -Descending | Select-Object -First $TopFolders)
+
+    $skipTop = @('Windows', '$Recycle.Bin', 'System Volume Information', 'Recovery', 'Program Files', 'Program Files (x86)')
+    $scanRoots = @($topDirs | Where-Object { $skipTop -notcontains $_.Name })
+
+    $largeFiles = New-Object System.Collections.ArrayList
+
+    foreach ($f in @(Get-ChildItem -LiteralPath $Root -File -Force -ErrorAction SilentlyContinue)) {
+        if ($f.Length -lt $minBytes) { continue }
+        if (@('pagefile.sys', 'hiberfil.sys', 'swapfile.sys') -contains $f.Name) { continue }
+        [void]$largeFiles.Add([pscustomobject]@{
+            Path      = $f.FullName
+            Bytes     = [int64]$f.Length
+            LastWrite = $f.LastWriteTime.ToString('yyyy-MM-dd')
+        })
+    }
+
+    foreach ($dir in $scanRoots) {
+        foreach ($f in @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -File -Force -ErrorAction SilentlyContinue)) {
+            if ($f.Length -lt $minBytes) { continue }
+            [void]$largeFiles.Add([pscustomobject]@{
+                Path      = $f.FullName
+                Bytes     = [int64]$f.Length
+                LastWrite = $f.LastWriteTime.ToString('yyyy-MM-dd')
+            })
+        }
+    }
+
+    $largeFiles = @($largeFiles | Sort-Object Bytes -Descending | Select-Object -First $TopFiles)
+
+    $installerExtensions = @('.exe', '.msi', '.msix', '.appx', '.iso', '.zip', '.7z', '.rar')
+    $installerRoots = @(
+        (Join-Path $env:USERPROFILE 'Downloads'),
+        (Join-Path $env:USERPROFILE 'Desktop')
+    )
+    $cutoff = (Get-Date).AddDays(-1 * $OldInstallerDays)
+    $oldInstallers = New-Object System.Collections.ArrayList
+    foreach ($dir in $installerRoots) {
+        if (-not (Test-Path -LiteralPath $dir)) { continue }
+        foreach ($f in @(Get-ChildItem -LiteralPath $dir -File -Force -ErrorAction SilentlyContinue)) {
+            if ($installerExtensions -notcontains $f.Extension.ToLowerInvariant()) { continue }
+            if ($f.LastWriteTime -gt $cutoff) { continue }
+            if ($f.Length -lt 10MB) { continue }
+            [void]$oldInstallers.Add([pscustomobject]@{
+                Path    = $f.FullName
+                Bytes   = [int64]$f.Length
+                AgeDays = [int][math]::Floor(((Get-Date) - $f.LastWriteTime).TotalDays)
+            })
+        }
+    }
+    $oldInstallers = @($oldInstallers | Sort-Object Bytes -Descending | Select-Object -First 15)
+
+    $duration = [math]::Round(((Get-Date) - $started).TotalSeconds, 1)
+
+    return [pscustomobject]@{
+        enabled              = $true
+        durationSeconds      = $duration
+        largeFileThresholdMB = $LargeFileMB
+        oldInstallerDays     = $OldInstallerDays
+        topFolders           = @($topFolderRows | ForEach-Object {
+            [pscustomobject]@{ Name = $_.Name; GB = [math]::Round($_.Bytes / 1GB, 2) }
+        })
+        largeFiles           = @($largeFiles | ForEach-Object {
+            [pscustomobject]@{ Path = $_.Path; GB = [math]::Round($_.Bytes / 1GB, 2); LastWrite = $_.LastWrite }
+        })
+        oldInstallers        = @($oldInstallers | ForEach-Object {
+            [pscustomobject]@{ Path = $_.Path; GB = [math]::Round($_.Bytes / 1GB, 2); AgeDays = $_.AgeDays }
+        })
+    }
 }

@@ -4,7 +4,7 @@
 
 A crew of OpenCode skills for Windows disk cleanup and safe maintenance.
 
-The first skill, **`clean-up-crew`**, audits disk usage, builds a cleanup plan, and deletes only after you approve that exact plan. It never force-kills processes and never works around administrator requirements.
+The first skill, **`clean-up-crew`**, audits disk usage across the Windows system drive, builds a cleanup plan, and deletes only after you approve that exact plan. It covers developer and browser caches, temp files, crash dumps, Windows Update caches, and the Recycle Bin. An optional deep scan shows the largest files and old installers anywhere on the drive, but never deletes them. It never force-kills processes and never works around administrator requirements.
 
 ## Requirements
 
@@ -47,18 +47,21 @@ npx skills update clean-up-crew -g
 
 ## What it does
 
-- Reports free space, cleanup target sizes, top `LocalAppData` folders, top global npm packages, and growth trend.
-- Builds a JSON plan for the target IDs you approve.
+- Reports free space, 30 cleanup target sizes, top `LocalAppData` folders, top global npm packages, and growth trend.
+- Covers developer caches (npm, pnpm, Yarn, pip, uv, Bun, Deno, Cargo, Gradle, Maven, NuGet, and more), browser caches (Chrome, Edge, Firefox, Brave), temp folders, crash dumps, error reports, and Windows Update caches.
+- Builds a JSON plan for the target IDs you approve, or a general plan with `-Preset recommended` (all tier-1 targets except the Recycle Bin).
 - Applies only that plan, re-checking paths and blocked processes at apply time.
+- `-DeepScan` adds a review-only map of the drive: top folders, files of 250 MB or more outside Windows, Program Files, and protected system folders, and installers older than 90 days at the top level of Downloads and Desktop. Nothing in that list is deleted.
 - Handles blocked browser caches and admin-only targets without force-killing or escalating.
 - Treats hibernation, pagefile changes, and app uninstalls as recommendations only (Tier 3).
 
 ## Safety model
 
-- **Report** is read-only. With `-SaveHistory` it adds one local history record.
-- **Plan** changes nothing. It records target IDs, current sizes, and blocked status.
+- **Report** is read-only. With `-SaveHistory` it adds one local history record. `-DeepScan` is also read-only and only lists review candidates.
+- **Plan** changes nothing. It records target IDs, current sizes, and blocked status. `-Preset recommended` excludes the irreversible Recycle Bin.
 - **Apply** requires explicit approval of the exact plan. The scripts re-expand paths from `references/targets.json`, re-check the path guard and blocked processes, and skip blocked items.
 - The scripts never force-kill processes or work around administrator requirements.
+- Deep-scan large files and old installers are never treated as targets. The user must review and remove them manually.
 - History lives at `%LOCALAPPDATA%\opencode-disk-cleanup\history.jsonl`. It is personal data and is not included in this repository.
 
 ## Manual install
@@ -87,7 +90,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up-crew\tests
 powershell -NoProfile -ExecutionPolicy Bypass -File .\skills\clean-up-crew\tests\Test-Apply.ps1
 ```
 
-Expected: 13 guardrail passes and 14 apply passes. The apply test uses a temporary fixture and restores `targets.json` and the local history file.
+Expected: 20 guardrail passes and 18 apply passes. The apply test uses temporary fixtures and restores `targets.json` and the local history file.
 
 ## Repository layout
 
@@ -99,9 +102,19 @@ Expected: 13 guardrail passes and 14 apply passes. The apply test uses a tempora
 
 ## Customizing
 
-Add or remove targets in `skills/clean-up-crew/references/targets.json`. Keep the required fields and run both tests after edits.
+Add or remove targets in `skills/clean-up-crew/references/targets.json`. Keep the required fields and run both tests after edits. Wildcards are supported in `contents` and `files` paths; each match is guarded at apply time.
 
-The skill targets the Windows system drive and uses `%SystemRoot%`, `%LOCALAPPDATA%`, and `%SystemDrive%`, so it adapts to the system drive letter.
+The skill targets the Windows system drive and uses `%SystemRoot%`, `%LOCALAPPDATA%`, and `%SystemDrive%`, so it adapts to the system drive letter. The deep scan follows the same system drive.
+
+### Target types
+
+| Type | Behavior |
+|---|---|
+| `contents` | Deletes the children of each directory; keeps the directory itself. |
+| `files` | Deletes each exact file or wildcard match. Never recurses into a directory. |
+| `profile-caches` | Expands browser profile directories and deletes the listed cache subfolders. |
+| `recyclebin` | Clears the Recycle Bin for the system drive. Irreversible. |
+| `dism` | Runs `DISM /Online /Cleanup-Image /StartComponentCleanup`. |
 
 ## More skills
 

@@ -2,6 +2,7 @@
 param(
     [string[]]$Items,
     [switch]$AllTier1,
+    [ValidateSet('recommended')][string]$Preset,
     [string]$OutFile,
     [switch]$Json
 )
@@ -14,8 +15,14 @@ $selected = @()
 
 if ($AllTier1) {
     $selected = @($targets | Where-Object { [int]$_.tier -eq 1 })
+} elseif ($Preset -eq 'recommended') {
+    $selected = @($targets | Where-Object { [int]$_.tier -eq 1 -and $_.id -ne 'recycle-bin' })
 } elseif ($Items -and $Items.Count -gt 0) {
-    foreach ($id in $Items) {
+    $requestedIds = @()
+    foreach ($raw in $Items) {
+        $requestedIds += @($raw -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    }
+    foreach ($id in $requestedIds) {
         $target = $targets | Where-Object { $_.id -eq $id } | Select-Object -First 1
         if (-not $target) {
             Write-Error "Unknown cleanup target: $id"
@@ -27,7 +34,7 @@ if ($AllTier1) {
         }
     }
 } else {
-    Write-Host 'No items selected. Pass -Items <id,...> or -AllTier1.'
+    Write-Host 'No items selected. Pass -Items <id,...>, -AllTier1, or -Preset recommended.'
     Write-Host ''
     $targets | Select-Object id, name, tier | Format-Table -AutoSize | Out-String | Write-Host
     exit 2
@@ -44,9 +51,9 @@ foreach ($t in $selected) {
     $bytes = [int64]0
     $paths = New-Object System.Collections.ArrayList
 
-    if ($t.type -eq 'contents' -or $t.type -eq 'profile-caches') {
+    if ($t.type -in @('contents', 'profile-caches', 'files')) {
         foreach ($entry in (Expand-CleanupTarget $t)) {
-            if ($entry.Kind -ne 'contents') { continue }
+            if ($entry.Kind -notin @('contents', 'files')) { continue }
             $size = Get-PathSize $entry.Path
             if ($size -gt 0) {
                 $bytes += $size

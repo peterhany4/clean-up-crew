@@ -4,7 +4,10 @@ param(
     [switch]$SkipTopDirs,
     [switch]$Json,
     [switch]$SaveHistory,
-    [switch]$IncludeDism
+    [switch]$IncludeDism,
+    [switch]$DeepScan,
+    [int]$LargeFileMB = 250,
+    [int]$OldInstallerDays = 90
 )
 
 . (Join-Path $PSScriptRoot 'CleanupCommon.ps1')
@@ -52,9 +55,9 @@ foreach ($t in $targets) {
     $bytes = [int64]0
     $paths = @()
 
-    if ($t.type -eq 'contents' -or $t.type -eq 'profile-caches') {
+    if ($t.type -in @('contents', 'profile-caches', 'files')) {
         foreach ($entry in (Expand-CleanupTarget $t)) {
-            if ($entry.Kind -ne 'contents') { continue }
+            if ($entry.Kind -notin @('contents', 'files')) { continue }
             $size = Get-PathSize $entry.Path
             if ($size -gt 0) {
                 $bytes += $size
@@ -125,6 +128,11 @@ if ($IncludeDism) {
     }
 }
 
+$deep = $null
+if ($DeepScan) {
+    $deep = Get-DeepScan -LargeFileMB $LargeFileMB -OldInstallerDays $OldInstallerDays
+}
+
 $history = @(Get-CleanupHistory | Where-Object { $null -ne $_.freeGB })
 $trend = $null
 if ($history.Count -ge 2) {
@@ -159,7 +167,7 @@ foreach ($row in $targetRows) {
     if ($row.tier -eq 1 -and -not $row.blocked) { $tier1Bytes += $row.bytes }
 }
 if ($tier1Bytes -gt 0) {
-    [void]$recommendations.Add("Tier 1 caches hold $(Format-Bytes $tier1Bytes). Review them with /clean-up-crew.")
+    [void]$recommendations.Add("Tier 1 targets hold $(Format-Bytes $tier1Bytes). Review them with /clean-up-crew.")
 }
 $hiber = $systemFiles | Where-Object { $_.Name -eq 'hiberfil.sys' } | Select-Object -First 1
 if ($hiber -and $null -ne $hiber.Bytes -and $hiber.Bytes -gt 4GB) {
@@ -173,6 +181,22 @@ if ($bigNpm) {
 }
 if ($trend -and $trend.BurnGBPerWeek -gt 0.3) {
     [void]$recommendations.Add("Disk use is growing about $($trend.BurnGBPerWeek) GB/week; roughly $($trend.WeeksTo2GB) weeks until 2 GB remain at this rate.")
+}
+$windowsOld = Join-Path ($drive + '\') 'Windows.old'
+if (Test-Path -LiteralPath $windowsOld) {
+    [void]$recommendations.Add('A previous Windows installation exists at Windows.old. Remove it through Settings > System > Storage or Disk Cleanup; this skill does not delete it.')
+}
+if ($deep) {
+    $largeCount = @($deep.largeFiles).Count
+    $largeGB = [math]::Round(((@($deep.largeFiles) | Measure-Object -Property GB -Sum).Sum), 2)
+    if ($largeCount -gt 0) {
+        [void]$recommendations.Add("Deep scan found $largeCount file(s) of at least $($deep.largeFileThresholdMB) MB outside Windows and Program Files, totaling $largeGB GB. They are review-only; this skill does not delete them.")
+    }
+    $installerCount = @($deep.oldInstallers).Count
+    $installerGB = [math]::Round(((@($deep.oldInstallers) | Measure-Object -Property GB -Sum).Sum), 2)
+    if ($installerCount -gt 0) {
+        [void]$recommendations.Add("Deep scan found $installerCount installer(s) older than $($deep.oldInstallerDays) days in Downloads or Desktop, totaling $installerGB GB. Review them manually.")
+    }
 }
 
 $report = [pscustomobject]@{
@@ -193,6 +217,7 @@ $report = [pscustomobject]@{
     topLocalAppData = @($topLocal | ForEach-Object { [pscustomobject]@{ Name = $_.Name; GB = [math]::Round($_.Bytes / 1GB, 2) } })
     topNpmGlobal   = @($topNpm | ForEach-Object { [pscustomobject]@{ Name = $_.Name; GB = [math]::Round($_.Bytes / 1GB, 2) } })
     componentStore = $dism
+    deepScan       = $deep
     trend          = $trend
     recommendations = @($recommendations)
 }
@@ -255,6 +280,37 @@ if ($topNpm.Count -gt 0) {
 if ($dism) {
     Write-Host 'Component store' -ForegroundColor Cyan
     $dism | Format-List | Out-String | Write-Host
+}
+
+if ($deep) {
+    Write-Host 'Deep scan (review only - nothing here is deleted)' -ForegroundColor Cyan
+    Write-Host ("  Completed in {0:N1}s | largest files >= {1} MB | installers older than {2} days" -f $deep.durationSeconds, $deep.largeFileThresholdMB, $deep.oldInstallerDays)
+
+    if (@($deep.topFolders).Count -gt 0) {
+        Write-Host ''
+        Write-Host 'Top folders on the drive' -ForegroundColor Cyan
+        @($deep.topFolders) | ForEach-Object {
+            [pscustomobject]@{ Folder = $_.Name; Size = ('{0:N2} GB' -f $_.GB) }
+        } | Format-Table -AutoSize | Out-String | Write-Host
+    }
+
+    if (@($deep.largeFiles).Count -gt 0) {
+        Write-Host 'Largest files outside Windows and Program Files' -ForegroundColor Cyan
+        foreach ($f in @($deep.largeFiles)) {
+            Write-Host ("  {0,8:N2} GB  {1}  {2}" -f $f.GB, $f.LastWrite, $f.Path)
+        }
+    }
+
+    if (@($deep.oldInstallers).Count -gt 0) {
+        Write-Host 'Old installers at the top level of Downloads and Desktop' -ForegroundColor Cyan
+        foreach ($f in @($deep.oldInstallers)) {
+            Write-Host ("  {0,8:N2} GB  {1,4} days  {2}" -f $f.GB, $f.AgeDays, $f.Path)
+        }
+    }
+
+    Write-Host ''
+    Write-Host 'These items are not cleanup targets. Review them manually; the skill does not delete them.' -ForegroundColor Yellow
+    Write-Host ''
 }
 
 if ($trend) {

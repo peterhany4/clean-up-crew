@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "targets": [
     {
       "id": "npm-cache",
@@ -29,6 +29,205 @@
       "processes": [],
       "requiresAdmin": false,
       "regenerates": "pnpm restores packages from the registry",
+      "risk": "none"
+    },
+    {
+      "id": "yarn-cache",
+      "name": "Yarn cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\Yarn\\Cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Yarn re-downloads packages on demand",
+      "risk": "next install re-downloads packages"
+    },
+    {
+      "id": "pip-cache",
+      "name": "pip cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\pip\\Cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "pip re-downloads wheels and source packages",
+      "risk": "next install re-downloads packages"
+    },
+    {
+      "id": "uv-cache",
+      "name": "uv cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\uv\\cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "uv re-downloads packages and wheels",
+      "risk": "next install re-downloads packages"
+    },
+    {
+      "id": "bun-cache",
+      "name": "Bun install cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\bun\\install\\cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Bun re-downloads packages on demand",
+      "risk": "next install re-downloads packages"
+    },
+    {
+      "id": "deno-cache",
+      "name": "Deno cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\deno\\deps",
+        "%LOCALAPPDATA%\\deno\\gen",
+        "%LOCALAPPDATA%\\deno\\registries"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Deno re-downloads remote modules",
+      "risk": "next run re-downloads remote modules"
+    },
+    {
+      "id": "go-build-cache",
+      "name": "Go build cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\go-build"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Go recompiles packages on demand",
+      "risk": "next build is slower"
+    },
+    {
+      "id": "cargo-cache",
+      "name": "Cargo registry cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%USERPROFILE%\\.cargo\\registry\\cache",
+        "%USERPROFILE%\\.cargo\\registry\\src"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Cargo re-downloads crates on demand",
+      "risk": "next build re-downloads crates"
+    },
+    {
+      "id": "gradle-cache",
+      "name": "Gradle cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%USERPROFILE%\\.gradle\\caches"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Gradle re-downloads dependencies and build artifacts",
+      "risk": "next build re-downloads dependencies"
+    },
+    {
+      "id": "maven-repo",
+      "name": "Maven local repository",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%USERPROFILE%\\.m2\\repository"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Maven re-downloads dependencies on demand",
+      "risk": "next build re-downloads dependencies"
+    },
+    {
+      "id": "nuget-cache",
+      "name": "NuGet package cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%USERPROFILE%\\.nuget\\packages"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "NuGet restores packages on demand",
+      "risk": "next restore re-downloads packages"
+    },
+    {
+      "id": "cpptools-ipch",
+      "name": "C++ IntelliSense cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\Microsoft\\vscode-cpptools\\ipch"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "VS Code regenerates precompiled headers",
+      "risk": "first IntelliSense pass is slower"
+    },
+    {
+      "id": "electron-cache",
+      "name": "Electron installer cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\electron"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "re-downloaded when an Electron app is rebuilt",
+      "risk": "none"
+    },
+    {
+      "id": "lm-studio-updater",
+      "name": "LM Studio updater cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\lm-studio-updater"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "LM Studio downloads updates again if needed",
+      "risk": "none"
+    },
+    {
+      "id": "google-updater-cache",
+      "name": "Google updater cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\Google\\GoogleUpdater\\crx_cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "Google updater re-downloads components when needed",
       "risk": "none"
     },
     {
@@ -96,6 +295,60 @@
       "risk": "sites load slower once"
     },
     {
+      "id": "firefox-cache",
+      "name": "Firefox caches",
+      "tier": 1,
+      "type": "profile-caches",
+      "profileRoot": "%LOCALAPPDATA%\\Mozilla\\Firefox\\Profiles",
+      "profilePattern": "^.+$",
+      "cacheDirs": [
+        "cache2",
+        "startupCache",
+        "shader-cache",
+        "thumbnails"
+      ],
+      "extraPaths": [],
+      "exclude": [],
+      "processes": [
+        "firefox"
+      ],
+      "requiresAdmin": false,
+      "regenerates": "Firefox rebuilds caches; bookmarks, logins, and history are kept",
+      "risk": "sites load slower once"
+    },
+    {
+      "id": "brave-cache",
+      "name": "Brave caches",
+      "tier": 1,
+      "type": "profile-caches",
+      "profileRoot": "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data",
+      "profilePattern": "^(Default|Profile \\d+)$",
+      "cacheDirs": [
+        "Cache",
+        "Code Cache",
+        "Service Worker",
+        "GPUCache",
+        "DawnCache",
+        "DawnGraphiteCache",
+        "DawnWebGPUCache",
+        "GrShaderCache",
+        "ShaderCache",
+        "Media Cache"
+      ],
+      "extraPaths": [
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\component_crx_cache",
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\GrShaderCache",
+        "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\ShaderCache"
+      ],
+      "exclude": [],
+      "processes": [
+        "brave"
+      ],
+      "requiresAdmin": false,
+      "regenerates": "Brave rebuilds caches; logins and bookmarks are kept",
+      "risk": "sites load slower once"
+    },
+    {
       "id": "temp-user",
       "name": "User temp folder",
       "tier": 1,
@@ -126,46 +379,76 @@
       "risk": "locked files are skipped"
     },
     {
-      "id": "cpptools-ipch",
-      "name": "C++ IntelliSense cache",
+      "id": "crash-dumps-user",
+      "name": "User crash dumps",
       "tier": 1,
       "type": "contents",
       "paths": [
-        "%LOCALAPPDATA%\\Microsoft\\vscode-cpptools\\ipch"
+        "%LOCALAPPDATA%\\CrashDumps"
       ],
       "exclude": [],
       "processes": [],
       "requiresAdmin": false,
-      "regenerates": "VS Code regenerates precompiled headers",
-      "risk": "first IntelliSense pass is slower"
+      "regenerates": "new crashes create new dumps",
+      "risk": "loses diagnostic data from past crashes"
     },
     {
-      "id": "electron-cache",
-      "name": "Electron installer cache",
+      "id": "wer-user",
+      "name": "User error reports",
       "tier": 1,
       "type": "contents",
       "paths": [
-        "%LOCALAPPDATA%\\electron"
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\ReportArchive",
+        "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\ReportQueue"
       ],
       "exclude": [],
       "processes": [],
       "requiresAdmin": false,
-      "regenerates": "re-downloaded when an Electron app is rebuilt",
-      "risk": "none"
+      "regenerates": "new errors create new reports",
+      "risk": "loses error-report history"
     },
     {
-      "id": "lm-studio-updater",
-      "name": "LM Studio updater cache",
+      "id": "wer-system",
+      "name": "System error reports",
       "tier": 1,
       "type": "contents",
       "paths": [
-        "%LOCALAPPDATA%\\lm-studio-updater"
+        "%ProgramData%\\Microsoft\\Windows\\WER\\ReportArchive",
+        "%ProgramData%\\Microsoft\\Windows\\WER\\ReportQueue"
       ],
       "exclude": [],
       "processes": [],
-      "requiresAdmin": false,
-      "regenerates": "LM Studio downloads updates again if needed",
-      "risk": "none"
+      "requiresAdmin": true,
+      "regenerates": "new errors create new reports",
+      "risk": "loses error-report history"
+    },
+    {
+      "id": "windows-update-cache",
+      "name": "Windows Update download cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%SystemRoot%\\SoftwareDistribution\\Download"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": true,
+      "regenerates": "Windows re-downloads updates when needed",
+      "risk": "pending updates re-download; locked files are skipped"
+    },
+    {
+      "id": "delivery-optimization-cache",
+      "name": "Delivery Optimization cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%ProgramData%\\Microsoft\\Windows\\DeliveryOptimization\\Cache"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": true,
+      "regenerates": "Delivery Optimization re-caches update content",
+      "risk": "updates re-download from the internet"
     },
     {
       "id": "recycle-bin",
@@ -178,6 +461,22 @@
       "requiresAdmin": false,
       "regenerates": "not applicable",
       "risk": "permanently deletes items already in the bin"
+    },
+    {
+      "id": "crash-dumps-system",
+      "name": "Windows crash dumps",
+      "tier": 2,
+      "type": "files",
+      "paths": [
+        "%SystemRoot%\\MEMORY.DMP",
+        "%SystemRoot%\\Minidump\\*.dmp",
+        "%SystemRoot%\\LiveKernelReports\\*.dmp"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": true,
+      "regenerates": "new crashes create new dump files",
+      "risk": "loses crash diagnostics; dump files can be large"
     },
     {
       "id": "dism-component-cleanup",

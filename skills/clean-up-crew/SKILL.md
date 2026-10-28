@@ -1,11 +1,13 @@
 ---
 name: clean-up-crew
-description: Check Windows disk usage, report growth trends, and clean approved caches safely. Use for "check C drive", "clean up disk", "disk is full", "weekly disk check", "what can I delete", or /clean-up-crew.
+description: Check Windows disk usage across the system drive, report growth trends, and clean approved caches safely. Use for "check C drive", "clean up disk", "clean up C", "disk is full", "what is using my space", "find large files", "weekly disk check", "what can I delete", or /clean-up-crew.
 ---
 
 # Clean Up Crew
 
 Safely audit and clean a Windows system drive.
+
+It covers the whole system drive in two ways: an allowlist of safe junk locations (developer caches, browser caches, temp, crash dumps, update caches, Recycle Bin) and an optional deep scan that finds the largest files and old installers outside Windows, Program Files, and protected system folders. The deep scan is report-only; those files are never deleted by a plan.
 
 - Skill ID: `clean-up-crew`
 - Command: `/clean-up-crew` (template: `command.md` in this folder)
@@ -19,8 +21,10 @@ Safely audit and clean a Windows system drive.
 - Never delete anything without explicit approval in the current conversation.
 - Never invent cleanup paths. The allowlist in `references/targets.json` is authoritative.
 - Never touch user documents, the registry, restore points, `pagefile.sys`, `hiberfil.sys`, or `swapfile.sys` directly.
-- Stay out of `Windows\`, `Program Files\`, `Program Files (x86)\`, and `WinSxS`, except the single allowlisted target `%SystemRoot%\Temp` (`temp-windows`).
+- Stay out of `Windows\`, `Program Files\`, `Program Files (x86)\`, and `WinSxS`, except the explicitly allowlisted targets: `%SystemRoot%\Temp`, `%SystemRoot%\SoftwareDistribution\Download`, `%SystemRoot%\Minidump\*.dmp`, `%SystemRoot%\LiveKernelReports\*.dmp`, and `%SystemRoot%\MEMORY.DMP`.
+- Deep-scan results, including large files, old installers, and top folders, are review-only. Never delete them as part of a plan and never present them as cleanup targets.
 - Do not edit `references/targets.json` between planning and applying. `Invoke-Cleanup.ps1` re-expands paths from that file, so an edit changes what an approved plan deletes.
+- Wildcards in `targets.json` are expanded to concrete paths before planning and again before applying. Every expanded path must pass the path guard. Never add a wildcard that can resolve into a protected path.
 - `Invoke-Cleanup.ps1` requires `-Apply`; never pass `-Apply` unless the user approved that exact plan.
 - If an item is blocked (browser running, admin required), report it. Never force-kill processes.
 - Never use `DISM /ResetBase` from this skill. It is a separate, explicitly consented decision.
@@ -30,14 +34,18 @@ Safely audit and clean a Windows system drive.
 
 | Script | Purpose | Flags |
 |---|---|---|
-| `scripts/Get-DiskReport.ps1` | Report free space, target sizes, top folders, trend, recommendations. No deletion. | `-SaveHistory`, `-Json`, `-SkipTopDirs`, `-IncludeDism`, `-TopDirs <n>` |
-| `scripts/New-CleanupPlan.ps1` | Resolve target IDs and blocked status into a plan JSON. No deletion. | `-Items <id,...>`, `-AllTier1`, `-OutFile <path>`, `-Json` |
+| `scripts/Get-DiskReport.ps1` | Report free space, target sizes, top folders, trend, recommendations. No deletion. | `-SaveHistory`, `-Json`, `-SkipTopDirs`, `-IncludeDism`, `-DeepScan`, `-LargeFileMB <n>`, `-OldInstallerDays <n>`, `-TopDirs <n>` |
+| `scripts/New-CleanupPlan.ps1` | Resolve target IDs and blocked status into a plan JSON. No deletion. | `-Items <id,...>`, `-AllTier1`, `-Preset recommended`, `-OutFile <path>`, `-Json` |
 | `scripts/Invoke-Cleanup.ps1` | Dry-run a plan or apply it, verify results, append history. | `-PlanFile <path>`, `-Apply`, `-Json` |
 | `scripts/Get-Trend.ps1` | Read history and calculate growth rate and runway. | `-Last <n>`, `-Json`, `-HistoryFile <path>` |
 | `tests/Test-Guardrails.ps1` | Verify path guardrails and deletion exclusions. | none |
 | `tests/Test-Apply.ps1` | End-to-end apply test with a fixture target, history isolation, and trend check. | none |
 
 `-IncludeDism` adds a `componentStore` field. When elevated it runs `DISM /Online /Cleanup-Image /AnalyzeComponentStore`; otherwise the field is `{ Error = 'requires administrator' }` and the rest of the report still runs. `-TopDirs` defaults to 8.
+
+`-DeepScan` walks the system drive and adds three review-only blocks to the report: top-level folder sizes, files of at least `-LargeFileMB` (default 250) outside Windows, Program Files, `$Recycle.Bin`, `System Volume Information`, and `Recovery`, and installers older than `-OldInstallerDays` (default 90) at the top level of Downloads and Desktop. It takes several minutes and deletes nothing. The same data appears in the JSON `deepScan` object.
+
+`-Preset recommended` selects every tier-1 target except `recycle-bin`. `-AllTier1` selects every tier-1 target, including the Recycle Bin.
 
 Run scripts with:
 
@@ -49,17 +57,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<skill-base>\scripts\Get-Di
 
 ### 1. Report (default)
 
-Run `Get-DiskReport.ps1 -SaveHistory`. Add `-SkipTopDirs` for a faster report, or `-Json` when another tool will parse the output.
+Run `Get-DiskReport.ps1 -SaveHistory`. Add `-SkipTopDirs` for a faster report, or `-Json` when another tool will parse the output. Add `-DeepScan` when the user asks what is using the drive, asks for large files, or wants a general cleanup; it takes several minutes.
 
 Present a compact summary:
 
 - free GB and percent
 - cleanup targets: id, tier, size, ready/blocked
 - top `LocalAppData` folders and top global npm packages
+- deep-scan review blocks when requested: top folders, large files, old installers
 - trend: GB/week and weeks until 2 GB remain
 - recommendations
 
-Do not delete anything in this step. Ask which target IDs the user approves. Approval must name IDs or a tier, not "clean everything". The sizes are measurements at report time; the plan re-measures them.
+Do not delete anything in this step. Ask which target IDs the user approves. For a general cleanup, recommend `-Preset recommended`, which covers every tier-1 target except the Recycle Bin. Approval must name IDs or a tier, not "clean everything". The sizes are measurements at report time; the plan re-measures them.
 
 ### 2. Plan
 
@@ -70,9 +79,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "<skill-base>\scripts\New-Cl
   -Items npm-cache,chrome-cache -OutFile "$env:TEMP\clean-up-crew-plan.json"
 ```
 
-Use `-AllTier1` to select every tier-1 target. `New-CleanupPlan.ps1` does not delete and does not run the path guard. It records the selected IDs, current sizes, and blocked status (process/admin). The `paths` in the plan are informational; apply ignores them and re-expands from `targets.json`.
+Use `-Preset recommended` for a general cleanup, or `-AllTier1` to select every tier-1 target including the Recycle Bin. `New-CleanupPlan.ps1` does not delete and does not run the path guard. It records the selected IDs, current sizes, and blocked status (process/admin). The `paths` in the plan are informational; apply ignores them and re-expands from `targets.json`. Wildcards in `targets.json` are expanded during both steps.
 
-Show the plan: item, size, status, and blocked reasons. If an item is blocked, ask the user to close the named app or to run elevated, then regenerate the plan.
+Show the plan: item, size, status, and blocked reasons. If an item is blocked, ask the user to close the named app or to run elevated, then regenerate the plan. Blocked items stay in the plan and are skipped at apply.
 
 Generated plans carry `createdAt`. `Invoke-Cleanup.ps1 -Apply` rejects plans older than one hour. It cannot detect a restart or a target change; regenerate after either.
 
@@ -116,19 +125,21 @@ History is written only by `Get-DiskReport.ps1 -SaveHistory` and by `Invoke-Clea
 
 | Tier | Meaning | Examples |
 |---|---|---|
-| 1 | Safe caches; regenerate automatically | npm, pnpm, Chrome/Edge caches, Temp, IntelliSense, Electron, updater cache, Recycle Bin |
-| 2 | System servicing; slower and needs admin | DISM component cleanup |
+| 1 | Safe cleanup; low risk | npm, pnpm, pip, uv, Yarn, Bun, Deno, Cargo, Gradle, Maven, NuGet, Chrome/Edge/Firefox/Brave caches, Temp, crash dumps, error reports, Windows Update cache, Recycle Bin |
+| 2 | System-level; slower or loses diagnostics, needs admin | DISM component cleanup, Windows crash dumps |
 | 3 | Trade-offs; never executed by this skill | hibernation, pagefile size, uninstalling apps |
 
-Tier values live in `targets.json`. Tier 3 items are not targets; they are recommendations only. Discuss them and get separate consent; do not delete or change them with these scripts.
+Tier values live in `targets.json`. Tier 1 means low risk to the system, not zero data loss: crash dumps, error reports, and the Recycle Bin remove diagnostic data or files permanently. `recycle-bin` is tier 1 for grouping but is irreversible, so `-Preset recommended` excludes it. Tier 3 items are not targets; they are recommendations only. Discuss them and get separate consent; do not delete or change them with these scripts.
 
 ## Target IDs
 
-The authoritative list is `references/targets.json`. These IDs are a convenience snapshot:
+The authoritative list is `references/targets.json`. These groups are a convenience snapshot; trust the JSON if they disagree.
 
-`npm-cache`, `pnpm-store`, `chrome-cache`, `edge-cache`, `temp-user`, `temp-windows`, `cpptools-ipch`, `electron-cache`, `lm-studio-updater`, `recycle-bin`, `dism-component-cleanup`.
-
-If this list and the JSON disagree, trust the JSON.
+- **Developer and tool caches:** `npm-cache`, `pnpm-store`, `yarn-cache`, `pip-cache`, `uv-cache`, `bun-cache`, `deno-cache`, `go-build-cache`, `cargo-cache`, `gradle-cache`, `maven-repo`, `nuget-cache`, `cpptools-ipch`, `electron-cache`, `lm-studio-updater`, `google-updater-cache`
+- **Browser caches:** `chrome-cache`, `edge-cache`, `firefox-cache`, `brave-cache`
+- **Temp and reports:** `temp-user`, `temp-windows`, `crash-dumps-user`, `wer-user`, `wer-system`
+- **Windows updates:** `windows-update-cache`, `delivery-optimization-cache`
+- **Special:** `recycle-bin` (irreversible), `crash-dumps-system` (tier 2), `dism-component-cleanup` (tier 2)
 
 ## Reporting guidance
 
@@ -138,15 +149,19 @@ If this list and the JSON disagree, trust the JSON.
 - State what will regrow; do not imply cleanup is permanent.
 - Do not present the sum of target bytes as guaranteed free space. Per-item measurements can overstate the net gain.
 - If growth exceeds roughly 0.3 GB/week, mention the runway to 2 GB free.
+- Deep-scan rows are review-only. Say that explicitly; never count them toward cleanup totals or imply that approving a plan deletes them.
+- When a deep-scan large file is also inside a cleanup target, label it as removable through that target; otherwise it is a manual review item.
 
 ## Troubleshooting
 
 - Execution policy: always invoke with `-ExecutionPolicy Bypass`.
-- Admin: `temp-windows` and `dism-component-cleanup` are blocked without elevation. Do not work around it.
+- Admin: `temp-windows`, `wer-system`, `windows-update-cache`, `delivery-optimization-cache`, `crash-dumps-system`, and `dism-component-cleanup` are blocked without elevation. Do not work around it.
 - Hibernation file: without elevation the report cannot read its size and shows `enabled; exact size needs admin` instead.
 - Locked files: `Remove-CleanupContents` skips them and reports failures. Close the app and retry; do not force-delete.
-- Browser caches: Chrome/Edge must be closed. Ask first; never kill the process.
-- Missing target: a missing directory is normal and is treated as zero bytes.
+- Browser caches: Chrome, Edge, Firefox, and Brave must be closed. Ask first; never kill the process.
+- Missing target: a missing directory or unmatched wildcard is normal and is treated as zero bytes.
+- Deep scan: takes several minutes on a full drive and is report-only. Do not run it on every routine check; use it when the user asks where the space went or wants a general cleanup.
+- Windows.old: the report only recommends removal through Settings or Disk Cleanup. This skill does not delete it.
 - DISM target: reports 0 bytes by design, so the report can show it as `empty`; use `-IncludeDism` for component-store analysis and expect a long apply. A plan can show `nothing to delete` for this target; that is a size artifact, not a no-op.
 - Recycle Bin and DISM: per-item freed bytes stay 0; use the net free-space delta.
 - Plan age: `-Apply` rejects plans older than one hour. Regenerate after a restart or a `targets.json` change.
@@ -160,4 +175,4 @@ If this list and the JSON disagree, trust the JSON.
 
 ## Change management
 
-Add a target to `references/targets.json` only with: `id`, `name`, `tier`, `type`, `paths`, `exclude`, `processes`, `requiresAdmin`, `regenerates`, and `risk`. For `profile-caches`, also provide `profileRoot`, `profilePattern`, and `cacheDirs`; `extraPaths` is optional. For `dism` and `recyclebin`, `paths` is empty. Run both scripts in `tests/` after edits.
+Add a target to `references/targets.json` only with: `id`, `name`, `tier`, `type`, `paths`, `exclude`, `processes`, `requiresAdmin`, `regenerates`, and `risk`. Supported types are `contents` (delete children of each path), `files` (delete each matched file, which may be a wildcard), `profile-caches`, `recyclebin`, and `dism`. For `profile-caches`, also provide `profileRoot`, `profilePattern`, and `cacheDirs`; `extraPaths` is optional. For `dism` and `recyclebin`, `paths` is empty. Wildcards are allowed in `contents` and `files` paths and are resolved before planning and applying. Run both scripts in `tests/` after edits.

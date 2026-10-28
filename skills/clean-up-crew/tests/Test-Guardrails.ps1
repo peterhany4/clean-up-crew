@@ -26,12 +26,41 @@ Assert-True (-not (Test-SafePath "$env:SystemRoot\System32\..\System32").Safe) '
 Assert-True ((Test-SafePath (Join-Path $env:LOCALAPPDATA 'npm-cache\_cacache')).Safe) 'Allows npm cache'
 Assert-True ((Test-SafePath (Join-Path $env:SystemRoot 'Temp')).Safe) 'Allows Windows Temp'
 
+$allTargets = Get-CleanupTargets
+$badTargets = @($allTargets | Where-Object {
+    -not $_.id -or -not $_.name -or $null -eq $_.tier -or -not $_.type -or $null -eq $_.regenerates -or $null -eq $_.risk
+})
+Assert-True ($badTargets.Count -eq 0) 'All targets have required fields'
+$duplicateIds = @($allTargets | Group-Object id | Where-Object { $_.Count -gt 1 })
+Assert-True ($duplicateIds.Count -eq 0) 'Target IDs are unique'
+$unknownTypes = @($allTargets | Where-Object { $_.type -notin @('contents', 'profile-caches', 'files', 'recyclebin', 'dism') })
+Assert-True ($unknownTypes.Count -eq 0) 'Target types are known'
+
+$wildDir = Join-Path $env:TEMP 'opencode-cleanup-wild'
+$wildA = Join-Path $wildDir 'a.tmp'
+$wildB = Join-Path $wildDir 'b.tmp'
+$wildKeep = Join-Path $wildDir 'keep.txt'
+
 $fixture = Join-Path $env:TEMP 'opencode-cleanup-test'
 $keepDir = Join-Path $fixture 'keep'
 $removeFile = Join-Path $fixture 'remove.txt'
 $keepFile = Join-Path $keepDir 'keep.txt'
 
 try {
+    if (Test-Path -LiteralPath $wildDir) { Remove-Item -LiteralPath $wildDir -Recurse -Force }
+    New-Item -ItemType Directory -Path $wildDir -Force | Out-Null
+    Set-Content -LiteralPath $wildA -Value 'a'
+    Set-Content -LiteralPath $wildB -Value 'b'
+    Set-Content -LiteralPath $wildKeep -Value 'keep'
+
+    $wildMatches = @(Resolve-CleanupPath (Join-Path $wildDir '*.tmp'))
+    Assert-True ($wildMatches.Count -eq 2) 'Expands wildcard paths'
+    Assert-True (@($wildMatches | Where-Object { $_ -like '*keep.txt' }).Count -eq 0) 'Wildcard expansion respects the pattern'
+
+    $removed = Remove-CleanupFile -Path $wildA
+    Assert-True ($removed.Removed -eq 1 -and -not (Test-Path -LiteralPath $wildA)) 'Removes a single file target'
+    Assert-True (Test-Path -LiteralPath $wildB) 'Leaves unmatched files alone'
+
     if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
     New-Item -ItemType Directory -Path $keepDir -Force | Out-Null
     Set-Content -LiteralPath $removeFile -Value 'delete me'
@@ -44,6 +73,7 @@ try {
     Assert-True ($result.Failed -eq 0) 'Reports zero failures'
 } finally {
     if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force -ErrorAction SilentlyContinue }
+    if (Test-Path -LiteralPath $wildDir) { Remove-Item -LiteralPath $wildDir -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 if ($script:failures -eq 0) {

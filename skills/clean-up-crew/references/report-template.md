@@ -17,6 +17,29 @@ Use measured values from `Get-DiskReport.ps1`. Do not fill gaps with estimates.
 
 Status values come from the report: `ready`, `empty`, or `blocked: <reason>`. DISM may show `empty` because it has no byte estimate.
 
+## Deep scan (only with `-DeepScan`)
+
+Review-only. These rows are **not** cleanup targets and are never deleted by a plan.
+
+### Top folders
+
+| Folder | Size |
+|---|---:|
+| Windows | 0.00 GB |
+| Users | 0.00 GB |
+
+### Largest files outside Windows and Program Files
+
+| File | Size | Modified |
+|---|---:|---|
+| `C:\...` | 0.00 GB | `YYYY-MM-DD` |
+
+### Old installers at the top level of Downloads and Desktop
+
+| File | Size | Age |
+|---|---:|---:|
+| `C:\...` | 0.00 GB | 0 days |
+
 ## Largest consumers
 
 | Item | Size | Notes |
@@ -35,9 +58,10 @@ History includes apply records, so a large cleanup can skew the rate.
 
 ## Recommended actions
 
-1. Tier 1 cleanup: `X.XX GB` — requires approval.
-2. Tier 2 component cleanup: analyze with `-IncludeDism` — requires admin.
+1. General tier 1 cleanup: `X.XX GB` with `-Preset recommended` (excludes the Recycle Bin) — requires approval.
+2. Tier 2 component cleanup or Windows crash dumps — analyze and get separate consent; admin required.
 3. Tier 3 structural: hibernation, apps, pagefile — separate decisions.
+4. Deep-scan files: review manually; not part of any plan.
 
 ## Applied result
 

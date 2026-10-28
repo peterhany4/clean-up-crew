@@ -46,7 +46,7 @@ foreach ($pi in @($plan.items)) {
     $bytesBefore = [int64]0
 
     foreach ($entry in $expanded) {
-        if ($entry.Kind -eq 'contents') {
+        if ($entry.Kind -eq 'contents' -or $entry.Kind -eq 'files') {
             if (-not (Test-Path -LiteralPath $entry.Path)) { continue }
             $safe = Test-SafePath $entry.Path
             if (-not $safe.Safe) {
@@ -98,6 +98,11 @@ foreach ($pi in @($plan.items)) {
                 $failed += [int]$r.Failed
                 foreach ($err in @($r.Errors)) { [void]$itemErrors.Add($err) }
             }
+            'files' {
+                $r = Remove-CleanupFile -Path $entry.Path
+                $failed += [int]$r.Failed
+                foreach ($err in @($r.Errors)) { [void]$itemErrors.Add($err) }
+            }
             'recyclebin' {
                 try {
                     Clear-RecycleBin -DriveLetter $env:SystemDrive.TrimEnd(':') -Force -ErrorAction Stop
@@ -120,7 +125,7 @@ foreach ($pi in @($plan.items)) {
 
     $bytesAfter = [int64]0
     foreach ($entry in $actionable) {
-        if ($entry.Kind -eq 'contents') { $bytesAfter += Get-PathSize $entry.Path }
+        if ($entry.Kind -eq 'contents' -or $entry.Kind -eq 'files') { $bytesAfter += Get-PathSize $entry.Path }
     }
     $freed = [math]::Max(0, $bytesBefore - $bytesAfter)
 

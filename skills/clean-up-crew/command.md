@@ -1,5 +1,5 @@
 ---
-description: Check Windows disk usage and clean approved caches safely
+description: Check Windows disk usage and clean approved caches safely across the system drive
 ---
 
 Load the `clean-up-crew` skill with the `skill` tool. The skill is authoritative for safety, targets, and script behavior. This command maps the user's arguments to one step of that workflow.
@@ -11,10 +11,13 @@ User arguments: `$ARGUMENTS`
 | Arguments | Action |
 |---|---|
 | empty, `report`, `status` | Run `Get-DiskReport.ps1 -SaveHistory`; present the report. Do not create a plan. |
+| `deep`, `scan` | Run `Get-DiskReport.ps1 -SaveHistory -DeepScan`; present the report and the review-only large-file and installer list. Do not create a plan. |
+| `clean`, `general` | Run `Get-DiskReport.ps1 -SaveHistory`, then `New-CleanupPlan.ps1 -Preset recommended`; show the report and plan. Stop for approval. |
 | `trend` | Run `Get-Trend.ps1 -Last 8`; summarize growth and runway. |
 | `targets`, `list` | List target IDs from the skill's `references/targets.json` with tier, name, and risk. Read-only. |
 | `plan <id> [<id> ...]` | Run `New-CleanupPlan.ps1 -Items <ids> -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan. Stop. |
-| `plan tier1` | Run `New-CleanupPlan.ps1 -AllTier1 -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan. Stop. |
+| `plan recommended` | Run `New-CleanupPlan.ps1 -Preset recommended -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan. Stop. |
+| `plan tier1` | Run `New-CleanupPlan.ps1 -AllTier1 -OutFile "$env:TEMP\clean-up-crew-plan.json"`; show the plan, including the irreversible Recycle Bin. Stop. |
 | `dry-run [plan-path]` | Run `Invoke-Cleanup.ps1 -PlanFile <path>` without `-Apply`. Default path: `$env:TEMP\clean-up-crew-plan.json`. |
 | `apply [plan-path]` | Only with explicit approval of that exact plan; run `Invoke-Cleanup.ps1 -PlanFile <path> -Apply`. Default path: `$env:TEMP\clean-up-crew-plan.json`. |
 | bare target IDs | Treat as `plan <ids>`. |
@@ -23,8 +26,10 @@ If `<plan-path>` is omitted for `dry-run` or `apply`, use `$env:TEMP\clean-up-cr
 
 ## Non-negotiable rules
 
-- For a new cleanup, report first unless the user named specific target IDs. Never plan and apply in one step.
+- For a new cleanup, report first unless the user named specific target IDs. Never plan and apply in one step. For `clean`, run the report and plan in one turn but stop before applying.
 - Approval must identify the plan (plan ID, or the exact target IDs/tier and sizes shown in this conversation). "Clean everything" is not approval.
+- `-Preset recommended` excludes the Recycle Bin. `-AllTier1` includes it; say that it is irreversible before asking for approval.
+- Deep-scan large files and old installers are review-only. Never add them to a plan or delete them.
 - Never pass `-Apply` without that approval.
 - Never edit the skill's `references/targets.json` to bypass a block or to add a path.
 - Never force-kill a process. If a browser or other listed process is running, report it and ask the user to close it.
@@ -35,7 +40,7 @@ If `<plan-path>` is omitted for `dry-run` or `apply`, use `$env:TEMP\clean-up-cr
 
 ## Response shape
 
-1. **Report**: free GB and percent, target table, largest consumers, trend, recommendations.
+1. **Report**: free GB and percent, target table, largest consumers, trend, recommendations. Include deep-scan review blocks when `-DeepScan` ran.
 2. **Plan**: plan ID, target IDs with measured size and status, blocked reasons, what will regrow, explicit approval question.
 3. **Apply result**: per-item freed bytes where measured, net free-space delta from `freeBeforeGB`/`freeAfterGB`, failures and skipped items, any immediate regrowth.
 4. **Trend**: free-space change per week and runway to 2 GB.
