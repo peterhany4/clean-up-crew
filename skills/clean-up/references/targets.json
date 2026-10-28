@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "id": "npm-cache",
+      "name": "npm cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\npm-cache\\_cacache",
+        "%LOCALAPPDATA%\\npm-cache\\_npx",
+        "%LOCALAPPDATA%\\npm-cache\\_logs"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "npm re-downloads packages on demand",
+      "risk": "none"
+    },
+    {
+      "id": "pnpm-store",
+      "name": "pnpm store",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\pnpm\\store"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "pnpm restores packages from the registry",
+      "risk": "none"
+    },
+    {
+      "id": "chrome-cache",
+      "name": "Chrome caches",
+      "tier": 1,
+      "type": "profile-caches",
+      "profileRoot": "%LOCALAPPDATA%\\Google\\Chrome\\User Data",
+      "profilePattern": "^(Default|Profile \\d+)$",
+      "cacheDirs": [
+        "Cache",
+        "Code Cache",
+        "Service Worker",
+        "GPUCache",
+        "DawnCache",
+        "DawnGraphiteCache",
+        "DawnWebGPUCache",
+        "GrShaderCache",
+        "ShaderCache",
+        "Media Cache"
+      ],
+      "extraPaths": [
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\component_crx_cache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\GrShaderCache",
+        "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\ShaderCache"
+      ],
+      "exclude": [],
+      "processes": [
+        "chrome"
+      ],
+      "requiresAdmin": false,
+      "regenerates": "Chrome rebuilds caches; logins and bookmarks are kept",
+      "risk": "sites load slower once"
+    },
+    {
+      "id": "edge-cache",
+      "name": "Edge caches",
+      "tier": 1,
+      "type": "profile-caches",
+      "profileRoot": "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data",
+      "profilePattern": "^(Default|Profile \\d+)$",
+      "cacheDirs": [
+        "Cache",
+        "Code Cache",
+        "Service Worker",
+        "GPUCache",
+        "DawnCache",
+        "DawnGraphiteCache",
+        "DawnWebGPUCache",
+        "GrShaderCache",
+        "ShaderCache",
+        "Media Cache"
+      ],
+      "extraPaths": [
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\component_crx_cache",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\GrShaderCache",
+        "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\ShaderCache"
+      ],
+      "exclude": [],
+      "processes": [
+        "msedge"
+      ],
+      "requiresAdmin": false,
+      "regenerates": "Edge rebuilds caches; logins and bookmarks are kept",
+      "risk": "sites load slower once"
+    },
+    {
+      "id": "temp-user",
+      "name": "User temp folder",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\Temp"
+      ],
+      "exclude": [
+        "%LOCALAPPDATA%\\Temp\\opencode"
+      ],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "apps recreate temp files as needed",
+      "risk": "locked files are skipped"
+    },
+    {
+      "id": "temp-windows",
+      "name": "Windows temp folder",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%SystemRoot%\\Temp"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": true,
+      "regenerates": "Windows and installers recreate temp files",
+      "risk": "locked files are skipped"
+    },
+    {
+      "id": "cpptools-ipch",
+      "name": "C++ IntelliSense cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\Microsoft\\vscode-cpptools\\ipch"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "VS Code regenerates precompiled headers",
+      "risk": "first IntelliSense pass is slower"
+    },
+    {
+      "id": "electron-cache",
+      "name": "Electron installer cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\electron"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "re-downloaded when an Electron app is rebuilt",
+      "risk": "none"
+    },
+    {
+      "id": "lm-studio-updater",
+      "name": "LM Studio updater cache",
+      "tier": 1,
+      "type": "contents",
+      "paths": [
+        "%LOCALAPPDATA%\\lm-studio-updater"
+      ],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "LM Studio downloads updates again if needed",
+      "risk": "none"
+    },
+    {
+      "id": "recycle-bin",
+      "name": "Recycle Bin",
+      "tier": 1,
+      "type": "recyclebin",
+      "paths": [],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": false,
+      "regenerates": "not applicable",
+      "risk": "permanently deletes items already in the bin"
+    },
+    {
+      "id": "dism-component-cleanup",
+      "name": "Windows component cleanup",
+      "tier": 2,
+      "type": "dism",
+      "paths": [],
+      "exclude": [],
+      "processes": [],
+      "requiresAdmin": true,
+      "regenerates": "not applicable",
+      "risk": "removes superseded update backups; can take 10-30 minutes"
+    }
+  ]
+}
