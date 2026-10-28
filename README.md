@@ -1,5 +1,7 @@
 # Clean Up Crew
 
+[![Tests](https://github.com/peterhany4/clean-up-crew/actions/workflows/test.yml/badge.svg)](https://github.com/peterhany4/clean-up-crew/actions/workflows/test.yml)
+
 A crew of OpenCode skills for Windows disk cleanup and safe maintenance.
 
 The first skill, **`clean-up`**, audits disk usage, builds a cleanup plan, and deletes only after you approve that exact plan. It never force-kills processes and never works around administrator requirements.

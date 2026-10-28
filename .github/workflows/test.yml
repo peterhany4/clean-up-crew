@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run guardrail tests
+        shell: powershell
+        run: .\skills\clean-up\tests\Test-Guardrails.ps1
+
+      - name: Run apply tests
+        shell: powershell
+        run: .\skills\clean-up\tests\Test-Apply.ps1
